@@ -9,38 +9,39 @@ print(table)
 
 def memoization(val, ava):
     currRow = len(ava) - 1
-    currTableCell = table[currRow][val - 1] 
-    print(f"lca: {ava}[-1]")
-    print(f" val: {val} ---- currRow: {currRow} ----")
     lCoinAva = ava[-1]
-    print(f"currRow: {currRow}")
     lastBestOption = getChange(val, currRow - 1) if currRow - 1 else [1]
-    print(f"lbo: {lastBestOption} --- val: {val} ---- currRow: {currRow} ---- lCA: {lCoinAva}")
-
+    if val == 3:
+        print(f"15. table[row][val - 1] ==== {table[currRow][val - 1]} ----- val: {val} ---- row: {currRow}")
     if lCoinAva > val:
-        currTableCell = lastBestOption
+        table[currRow][val - 1] = lastBestOption
+        print(f"{table[currRow][val - 1]}")
         return
-    
-    val -= lCoinAva
+    targetVal = val
+    targetVal -= lCoinAva
     change = []
     change.append(lCoinAva)
 
-    if val:
-        change.append(getChange(val, currRow))
+    if targetVal:
+        print(f"25. shuii shuuii: {getChange(targetVal, currRow)}")
+        change.extend(getChange(targetVal, currRow))
     
-        print(lastBestOption)
+
     if len(lastBestOption) < len(change):
         change = lastBestOption
-
-    currTableCell = change
-
+    if val == 3:
+        print(f"33. table[row][val - 1] ==== {table[currRow][val - 1]} ----- val: {val} ---- row: {currRow}")
+    table[currRow][val - 1] = change
+    print(f"34. MANOOO: {table[currRow][val - 1]}")
 
 def getChange(val: int, row: int) -> list:
 
     if table[row][val - 1] == 0:
-        print(f"no value in table[{row}][{val - 1}] (value: {val}) --- running mem({val}, {available}[:{row}])  resava: {available[:row]}")
-        memoization(val, available[:row])
+        print(f"38. table[row][val - 1] ==== {table[row][val - 1]} ----- val: {val} ---- row: {row}")
+        memoization(val, available[:row + 1])
 
+    if table[row][val - 1] == 0:
+        print(f"41. parece que é 0 dnv")
     return table[row][val - 1]
 
 
