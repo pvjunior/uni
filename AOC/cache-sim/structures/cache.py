@@ -79,14 +79,17 @@ class Cache:
     def __str__(self):
         # AI BS
         # Determine width for the set address in binary
-        width = len(bin(len(self.M) - 1)) - 2
+        width = len(bin(len(self.M) - 1)) - 1
+        hexwidth = len(hex(len(self.M) - 1)) - 2
+
+
 
         # Build header: ADDR followed by repeating labels per associativity
-        res = "ADDR  " + "  ".join(["   TAG  DATA  VAL DIRTY  "] * self.associativity)
+        res = "    ADDR      " + "  ".join(["   TAG    DATA  VAL DIRTY  "] * self.associativity)
 
         # Build rows
         for addr, cache_set in enumerate(self.M):
-            row = f"{addr:0{width}b}  "
+            row = f"0x{addr:0{hexwidth}X} | {addr:0{width}b}  "
             # For each block in the set, use its __repr__
             for block in cache_set:
                 row += f"{block!r}  "
@@ -155,7 +158,7 @@ class Cache:
 
         data = 0
         for byte in bytes:
-            data = (data << 8) & byte
+            data = (data << 8) | byte
         # I know i could just sum(bytes). But I wanted to manipulate bytes myself as I'm not used to bitwise operations. + .sum() is generic and MAAAAYBE not as fast as joining bytes myself, but neither this code is optimized neither I'm willing to look for proof. I simply don't care enough.
         
         self._write_block(address, data)
@@ -210,7 +213,7 @@ class Cache:
 
     @blocksize.setter
     def blocksize(self, val):
-        if not log(val, 2):
+        if log(val, 2) % 1:
             raise ValueError("Block size must be power of 2")
         
         self._blocksize = val
@@ -218,3 +221,16 @@ class Cache:
 
     def getStats(self) -> str:
         return f'''QUERIES: {self.stats['query']}\nHITS: {self.stats['hit']}\nMISSES: {self.stats['miss']}\nMISS RATIO: {self.stats['miss']/self.stats['query']}'''
+
+    @property
+    def nsets(self):
+        return self._nsets
+
+    @nsets.setter
+    def nsets(self, val):
+        if log(val, 2) % 1:
+            raise ValueError("Nsets size must be power of 2")
+        
+        self._nsets = val
+
+ 
