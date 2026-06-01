@@ -112,7 +112,7 @@ class Cache:
         tag, index, offset = self._decode_address(address)
 
         found, block = self._fetch_block(tag, index)
-
+        print(f"------> f{found}  -- ind{block}<<<<<<")
         if not found:
             self.stats['miss'] += 1
             return self._refill(address)
@@ -150,7 +150,7 @@ class Cache:
         block.tag = tag
         block.payload = data
         block.dirty = 1
-        block.validate = 1
+        block.valid = 1
 
     def _refill(self, address) -> int:
         # Pretend it checks the ram....
@@ -200,9 +200,11 @@ class Cache:
         return self.M[index]
     
     def _fetch_block(self, tag, index) -> tuple:
+        print(f"esse eh o index>>> {index:b} essa a tag {tag:b}")
         set = self._fetch_set(index)
         for block in set:
-            if ~(block.tag ^ tag) and block.valid == 1:
+            print(f"OIAAAA {block.tag} aaaa {tag} =====>>> {(block.tag == tag)} uhhhh {block.valid}")
+            if (block.tag == tag) and block.valid == 1:
                 return (True, block)
         
         return (False, None)
@@ -220,7 +222,7 @@ class Cache:
     
 
     def getStats(self) -> str:
-        return f'''QUERIES: {self.stats['query']}\nHITS: {self.stats['hit']}\nMISSES: {self.stats['miss']}\nMISS RATIO: {self.stats['miss']/self.stats['query']}'''
+        return f'''QUERIES: {self.stats['query']}\nHITS: {self.stats['hit']}\nMISSES: {self.stats['miss']}\nMISS RATIO: {(self.stats['miss']/self.stats['query'] * 100):.2f}%'''
 
     @property
     def nsets(self):
