@@ -34,7 +34,15 @@ class DataBlock:
         
         if self.valid is not None:
             res = f"{res} {self.valid} |"
-        res = f"[ | 0x{self.tag:02X} | 0x{self.payload:02X} |{res} ]"
+
+        rawblock = self.payload
+        bytes = ''
+        for _ in range(int(self._blocksize / 8)):
+            byte = rawblock & 0b11111111
+            bytes = f"0x{byte:02X} {bytes}"
+            rawblock >>= 8
+        
+        res = f"[ | 0x{self.tag:02X} | {bytes} |{res} ]"
 
         return res
     

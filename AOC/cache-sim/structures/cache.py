@@ -1,3 +1,4 @@
+from random import randbytes, randint
 from enum import IntEnum
 from structures.data_block import DataBlock
 from math import log
@@ -111,7 +112,7 @@ class Cache:
 
         if not found:
             self.stats['miss'] += 1
-            return self._fetch_main(address)
+            return self._refill(address)
         
         self.stats['hit'] += 1
         return block.payload
@@ -148,16 +149,37 @@ class Cache:
         block.dirty = 1
         block.validate = 1
 
-    def _fetch_main(self, address) -> int:
+    def _refill(self, address) -> int:
         # Pretend it checks the ram....
-        data = 0x67
-        tag, index, offset = self._decode_address(address)
+        bytes = self._fetch_main(address)
 
-        set = self._fetch_set(index)
-        block = self.pick_block_by_politic(set)
-
+        data = 0
+        for byte in bytes:
+            data = (data << 8) & byte
+        # I know i could just sum(bytes). But I wanted to manipulate bytes myself as I'm not used to bitwise operations. + .sum() is generic and MAAAAYBE not as fast as joining bytes myself, but neither this code is optimized neither I'm willing to look for proof. I simply don't care enough.
+        
         self._write_block(address, data)
+        return data
 
+    
+    def _fetch_main(self, address) -> tuple:
+        #_, index, offset = self._decode_address
+        
+        addressRange = (address >> self._offset) << self._offset
+        bytes = bytearray()
+
+        for byte in range(addressRange, addressRange + self._blocksize):
+            bytes.append(self._get_byte_from_main(addressRange))
+
+        return tuple(bytes)
+
+    
+    def _get_byte_from_main(self, addresss) -> int:
+        # Lero lero generator
+        return randbytes(1)[0]
+        
+
+    
     def _decode_address(self, address) -> tuple:
 
         tag = address >> self.addressing - self._tagsize
