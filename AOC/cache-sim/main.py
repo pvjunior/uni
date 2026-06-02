@@ -3,14 +3,17 @@ from structures.cache import Cache
 def main():
     L1 = Cache(
         nsets=8,
-        blocksize_bytes=1,
+        blocksize_bytes=4,
         associativity=1,
-        addressing=4
+        addressing=8
     )
 
     L1.write(0b0000, 0xAB)
-    L1.read(0b1010)
-    L1.read(0b1010)
+    L1.read(0b00001010)
+    L1.read(0b00001010)
+    print(L1)
+    print("------------------------------")
+    L1.write(0b00001010, 0xCC)
     print(L1)
 
     print(L1.getStats())

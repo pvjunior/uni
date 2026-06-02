@@ -4,8 +4,8 @@ class DataBlock:
                  validator_bit: bool = True,
                  dirty_bit: bool = True):
         
-        self.valid = 0 if validator_bit else None
-        self.dirty = 0 if dirty_bit else None
+        self._valid = 0 if validator_bit else None
+        self._dirty = 0 if dirty_bit else None
         self._tag = [0 for _ in range(tag_size)]
         self._payload = [0 for _ in range(block_size)]
 
@@ -42,7 +42,7 @@ class DataBlock:
             bytes = f"0x{byte:02X} {bytes}"
             rawblock >>= 8
         
-        res = f"[ | 0x{self.tag:02X} | {bytes} |{res} ]"
+        res = f"[ | 0x{self.tag:02X} | {bytes}|{res} ]"
 
         return res
     
@@ -107,3 +107,24 @@ class DataBlock:
 
 
         self._payload = newpayload
+
+    @property
+    def valid(self):
+        return self._valid
+    
+    @valid.setter
+    def valid(self, val):
+        if self.valid is not None:
+            self._valid = val
+
+    @property
+    def dirty(self):
+        return self._dirty
+
+    @dirty.setter
+    def dirty(self, val):
+        if self.dirty is not None:
+            self._dirty = val
+
+    
+

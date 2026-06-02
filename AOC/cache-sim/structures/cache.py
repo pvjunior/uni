@@ -61,10 +61,9 @@ class Cache:
             for _ in range(self.associativity):
 
                 block = DataBlock(
-                    self.blocksize * 8,
-                    self._tagsize,
-                    True,
-                    True
+                    block_size=self.blocksize * 8,
+                    tag_size=self._tagsize,
+                    validator_bit=True, dirty_bit=True
                 )
                 set.append(block)
             cachebuild.append(tuple(set))
@@ -112,7 +111,6 @@ class Cache:
         tag, index, offset = self._decode_address(address)
 
         found, block = self._fetch_block(tag, index)
-        print(f"------> f{found}  -- ind{block}<<<<<<")
         if not found:
             self.stats['miss'] += 1
             return self._refill(address)
@@ -127,23 +125,32 @@ class Cache:
         tag, index, offset = self._decode_address(address)
 
         found, block = self._fetch_block(tag, index)
-
+        
+        mask = data << offset
+        print(f"data: {data:032b}\nMask: {mask:032b}")
         if found:
+            print(f"load: {block.payload:032b}")
+            data = block.payload & mask
             self.stats['hit'] += 1
-            self._write_block(address, data)
-            return
+        else:
+            self.stats['miss'] += 1
 
-        self.stats['miss'] += 1
+        print(f"Fata: {data:032b}")
+
         self._write_block(address, data)
         
 
-    def _write_block(self, address: int, data: int):
+    def _write_block(self, address: int, data: int, dirty: bool=True):
         tag, index, offset = self._decode_address(address)
 
         set = self._fetch_set(index)
         block = self.pick_block_by_politic(set)
+        
 
+                
         self._update_block_data(block, tag, data)
+        if not dirty:
+            block.dirty = 0
 
     def _update_block_data(self, block: DataBlock, tag: int, data: int):
 
@@ -161,9 +168,9 @@ class Cache:
             data = (data << 8) | byte
         # I know i could just sum(bytes). But I wanted to manipulate bytes myself as I'm not used to bitwise operations. + .sum() is generic and MAAAAYBE not as fast as joining bytes myself, but neither this code is optimized neither I'm willing to look for proof. I simply don't care enough.
         
-        self._write_block(address, data)
+        self._write_block(address, data, dirty=False)
         return data
-
+    
     
     def _fetch_main(self, address) -> tuple:
         #_, index, offset = self._decode_address
@@ -193,6 +200,7 @@ class Cache:
             
     def pick_block_by_politic(self, set: tuple) -> DataBlock:
         # TODO: add the correct strategies
+        #
 
         return set[0]
 
@@ -200,11 +208,9 @@ class Cache:
         return self.M[index]
     
     def _fetch_block(self, tag, index) -> tuple:
-        print(f"esse eh o index>>> {index:b} essa a tag {tag:b}")
         set = self._fetch_set(index)
         for block in set:
-            print(f"OIAAAA {block.tag} aaaa {tag} =====>>> {(block.tag == tag)} uhhhh {block.valid}")
-            if (block.tag == tag) and block.valid == 1:
+            if (block.tag == tag) and block.valid != 0:
                 return (True, block)
         
         return (False, None)
