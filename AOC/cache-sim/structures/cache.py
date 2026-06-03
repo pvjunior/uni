@@ -251,6 +251,7 @@ class Cache:
 
 class _PLRU():
     def __init__(self, nsets: int, associativity: int):
+        self.root = _PLRU_Tree_N()
         
 
 class _PLRU_Tree_N():
