@@ -152,11 +152,11 @@ class Cache:
     def _write_block(self, address: int, data: int, dirty: bool=True):
         tag, index, offset = self._decode_address(address)
 
-        set = self._fetch_set(index)
-        block = self.pick_block_by_politic(set)
-        
-
-                
+        found, block = self._fetch_block(tag, index)
+        if not found:
+            set = self._fetch_set(index)
+            block = self.pick_block_by_politic(set)
+            
         self._update_block_data(block, tag, data)
         if not dirty:
             block.dirty = 0
@@ -195,8 +195,7 @@ class Cache:
     
     def _get_byte_from_main(self, addresss) -> int:
         # Lero lero generator
-        return randbytes(1)[0]
-        
+        return randbytes(1)[0] 
 
     
     def _decode_address(self, address) -> tuple:
@@ -250,4 +249,15 @@ class Cache:
         
         self._nsets = val
 
- 
+class _PLRU():
+    def __init__(self, nsets: int, associativity: int):
+        
+
+class _PLRU_Tree_N():
+    def __init__(self, n1, n2, value: int = 0):
+        self.next = value
+        self.nodes = tuple(n1, n2)
+
+    def getNext(self):
+        # returns the pointed node and points to the other
+        return nodes[self.next:= self.next & ~0]
