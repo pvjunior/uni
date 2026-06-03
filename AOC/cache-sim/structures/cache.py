@@ -125,20 +125,29 @@ class Cache:
         tag, index, offset = self._decode_address(address)
 
         found, block = self._fetch_block(tag, index)
-        
-        mask = data << offset
-        print(f"data: {data:032b}\nMask: {mask:032b}")
+        curr_block_payload = 0x00
+
         if found:
-            print(f"load: {block.payload:032b}")
-            data = block.payload & mask
+            curr_block_payload = block.payload
             self.stats['hit'] += 1
         else:
             self.stats['miss'] += 1
 
-        print(f"Fata: {data:032b}")
+        data = self._insert_byte_in_position(curr_block_payload, data, offset)
 
         self._write_block(address, data)
         
+
+    def _insert_byte_in_position(self, current_block_payload: int, data_to_insert: int, offset: int) -> int:
+        # That's some crazt shi
+        max_offset_count = (1 << self._offset) - 1
+
+        data_to_insert <<= 8 * (max_offset_count - offset)
+        mask = 0b11111111 << 8 * (max_offset_count - offset)
+        current_block_payload = (current_block_payload & ~mask)
+
+        return (current_block_payload | data_to_insert)
+
 
     def _write_block(self, address: int, data: int, dirty: bool=True):
         tag, index, offset = self._decode_address(address)
