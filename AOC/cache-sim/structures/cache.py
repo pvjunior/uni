@@ -1,5 +1,4 @@
-from random import randbytes, randint
-from enum import IntEnum
+from random import randbytes, randint, choice
 from structures.data_block import DataBlock
 from math import log
 
@@ -11,52 +10,27 @@ class Cache:
                  addressing: int = 32,
                  replacement: str = "LRU"
                  ):
-        
-        addrOPTS = [2, 4, 8, 16, 32, 64]
-        replOPTS = ["LRU", "FIFO", "RANDOM"]
 
         if nsets % associativity and not nsets == 1:
             raise ValueError("Associativy must be ratio of nsets")
 
         self.nsets = nsets
         self.blocksize = blocksize_bytes
-
-        
         self.associativity = associativity
-        
-        if not addressing in addrOPTS:
-            raise ValueError(f"{associativity} bit addresses not supported, only 32 and 64")
-        
-        if not replacement in replOPTS:
-            raise ValueError(f"{replacement} not an option for replacement strategy. Available options: {replOPTS}")
-        
         self.replacement = replacement
         self.addressing = addressing
-
-        self._indexsize = int(log(self.nsets, 2))
-        self._offset = int(log(self.blocksize, 2))
-        self._tagsize = addressing - self._indexsize - self._offset
-
-        if addressing < self._offset + self._indexsize:
-            for addropt in addrOPTS:
-                if addropt >= self._offset + self._indexsize:
-                    suggestion = addropt
-                    break
-            raise ValueError(f"Incompatible addressing size with current nsets and blocksize values. nsets ({self._indexsize} bits) + blocksize ({blocksize_bytes} bytes, totaling {self._offset} bits for offset) is less than the available {addressing} bits for addressing. Addressing, for this configuration, must be {suggestion} bits or more")
-
 
         self.M: tuple
         self.stats = dict()
 
         self._initializeCache()
 
-    
 
     def _initializeCache(self):
 
         cachebuild = []
 
-        for _ in range(self.nsets):
+        for setIndex in range(self.nsets):
             set = []
             for _ in range(self.associativity):
 
@@ -66,6 +40,11 @@ class Cache:
                     validator_bit=True, dirty_bit=True
                 )
                 set.append(block)
+
+                if self.replacement == "LRU":
+                    # I KNOW THIS IS >>>>>STUPID<<<<< but I'm not willing to create an whole system just for 3 or 4 options that will mostly just do 3 calculations and return an index
+                    self.PLRU.insertInSet(setIndex, set)
+
             cachebuild.append(tuple(set))
 
         self.M = tuple(cachebuild)
@@ -129,12 +108,13 @@ class Cache:
 
         if found:
             curr_block_payload = block.payload
+            print(f"{curr_block_payload:b}")
             self.stats['hit'] += 1
         else:
             self.stats['miss'] += 1
-
+        print(f"{data:b}")
         data = self._insert_byte_in_position(curr_block_payload, data, offset)
-
+        print(f"{data:b}")
         self._write_block(address, data)
         
 
@@ -208,9 +188,29 @@ class Cache:
             
     def pick_block_by_politic(self, set: tuple) -> DataBlock:
         # TODO: add the correct strategies
-        #
 
-        return set[0]
+        for block in set:
+            if block.valid == 0:
+                return block
+        
+        match self.replacement:
+            case None:
+                block = set[0]
+            
+            case "LRU":
+                index = self.M.index(set)
+                block = self.PLRU.get(index)
+                print(f"tag: {block.tag:b}, payload = {block.payload:b}")
+
+            case "FIFO":
+                index = self.M.index(set)
+                block = set[self.FIFO_tracking[index]]
+                self.FIFO_tracking[index] = (self.FIFO_tracking[index] + 1) % self.associativity
+
+            case "RANDOM":
+                block = choice(set)
+
+        return block
 
     def _fetch_set(self, index):
         return self.M[index]
@@ -249,16 +249,89 @@ class Cache:
         
         self._nsets = val
 
+    @property
+    def replacement(self):
+        return self._replacement
+    
+    @replacement.setter
+    def replacement(self, val):
+        replOPTS = ["LRU", "FIFO", "RANDOM"]
+
+        if self.associativity == 1:
+            self._replacement = None
+            return
+
+        match val:
+            case "LRU":
+                self.PLRU = _PLRU(self.nsets, self.associativity)
+
+            case "FIFO":
+                self.FIFO_tracking = [0] * self.nsets
+
+            case "RANDOM":
+                pass
+
+            case _:
+                raise ValueError(f"{val} not an option for replacement strategy. Available options: {replOPTS}")
+            
+        self._replacement = val
+
+    @property
+    def addressing(self):
+        return self._addressing
+    
+    @addressing.setter
+    def addressing(self, addressing):
+        addrOPTS = (2, 4, 8, 16, 32, 64)
+
+        if not addressing in addrOPTS:
+            raise ValueError(f"{addressing} bit addresses not supported, only: {addrOPTS}")
+        
+        self._addressing = addressing
+
+        self._proccess_address_composition(addrOPTS)
+    
+    def _proccess_address_composition(self, addrOPTS):
+        self._indexsize = int(log(self.nsets, 2))
+        self._offset = int(log(self.blocksize, 2))
+        self._tagsize = self.addressing - self._indexsize - self._offset
+
+        if self.addressing < self._offset + self._indexsize:
+            for addropt in addrOPTS:
+                if addropt >= self._offset + self._indexsize:
+                    suggestion = addropt
+                    break
+            raise ValueError(f"Incompatible addressing size with current nsets and blocksize values. nsets ({self._indexsize} bits) + blocksize ({self.blocksize_bytes} bytes, totaling {self._offset} bits for offset) is less than the available {self.addressing} bits for addressing. Addressing, for this configuration, must be {suggestion} bits or more")
+
 class _PLRU():
     def __init__(self, nsets: int, associativity: int):
-        self.root = _PLRU_Tree_N()
+        if associativity == 1:
+            raise BaseException("Associativity is 1. Something went very wrong in there pal.")
+        self.sets = []
+
+        for _ in range(nsets):
+            self.sets.append([0] * (associativity - 1))
+    
+    def insertInSet(self, setIndex: int, ways: list):
+        self.sets[setIndex].extend(ways)
+    
+    def get(self, setIndex: int) -> DataBlock:
+        tree = self.sets[setIndex]
+        
+        i = 0
+        while(isinstance(tree[i], int)):
+            match tree[i]:
+                case 0:
+                    # I'm still learning how to use a binary tree as an array
+                    tree[i] ^= 1
+                    i = 2 * i + 1
+                case 1:
+                    tree[i] ^= 1
+                    i = 2 * i + 2
+        
+        return tree[i]
+
+    def _get_block_traversal(tree: list):
+        return (tree)
         
 
-class _PLRU_Tree_N():
-    def __init__(self, n1, n2, value: int = 0):
-        self.next = value
-        self.nodes = tuple(n1, n2)
-
-    def getNext(self):
-        # returns the pointed node and points to the other
-        return nodes[self.next:= self.next & ~0]
