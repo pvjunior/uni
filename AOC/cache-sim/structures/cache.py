@@ -23,6 +23,8 @@ class Cache:
         self.M: tuple
         self.stats = dict()
 
+        self._warned = False
+
         self._initializeCache()
 
 
@@ -62,7 +64,7 @@ class Cache:
 
 
         # Build header: ADDR followed by repeating labels per associativity
-        res = "    ADDR      " + "  ".join(["   TAG    DATA  VAL DIRTY  "] * self.associativity)
+        res = "    ADDR         TAG    DATA  -->  VAL DIRTY  "
 
         # Build rows
         for addr, cache_set in enumerate(self.M):
@@ -175,10 +177,14 @@ class Cache:
 
     
     def _decode_address(self, address) -> tuple:
+        if address >= (1 << self.addressing) and not self._warned:
+            print(f"\n!!!\nIt will be said just this once: You are running addresses bigger than the {self.addressing}bit setted for this cache...\n")
+            self._warned = True
+            
 
         tag = address >> self.addressing - self._tagsize
         index = (address >> self._offset) & ((1 << self._indexsize) - 1)
-        offset = address & self._offset
+        offset = address & ((1 << self._offset) - 1)
 
         return tag, index, offset
             
