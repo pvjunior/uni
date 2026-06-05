@@ -41,9 +41,8 @@ class Cache:
                 )
                 set.append(block)
 
-                if self.replacement == "LRU":
-                    # I KNOW THIS IS >>>>>STUPID<<<<< but I'm not willing to create an whole system just for 3 or 4 options that will mostly just do 3 calculations and return an index
-                    self.PLRU.insertInSet(setIndex, set)
+            if self.replacement == "LRU":
+                self.PLRU.insertInSet(setIndex, set)
 
             cachebuild.append(tuple(set))
 
@@ -108,13 +107,10 @@ class Cache:
 
         if found:
             curr_block_payload = block.payload
-            print(f"{curr_block_payload:b}")
             self.stats['hit'] += 1
         else:
             self.stats['miss'] += 1
-        print(f"{data:b}")
         data = self._insert_byte_in_position(curr_block_payload, data, offset)
-        print(f"{data:b}")
         self._write_block(address, data)
         
 
@@ -200,7 +196,6 @@ class Cache:
             case "LRU":
                 index = self.M.index(set)
                 block = self.PLRU.get(index)
-                print(f"tag: {block.tag:b}, payload = {block.payload:b}")
 
             case "FIFO":
                 index = self.M.index(set)
@@ -217,8 +212,12 @@ class Cache:
     
     def _fetch_block(self, tag, index) -> tuple:
         set = self._fetch_set(index)
-        for block in set:
+        for way, block in enumerate(set):
             if (block.tag == tag) and block.valid != 0:
+                # I hope God doesn't punish me for toutching the way two times in a row, even though it changes nothing.
+                if self.replacement == "LRU":
+                    self.PLRU.touch(index, way)
+
                 return (True, block)
         
         return (False, None)
@@ -311,7 +310,9 @@ class _PLRU():
 
         for _ in range(nsets):
             self.sets.append([0] * (associativity - 1))
-    
+
+        self.associativity = associativity
+
     def insertInSet(self, setIndex: int, ways: list):
         self.sets[setIndex].extend(ways)
     
@@ -323,13 +324,31 @@ class _PLRU():
             match tree[i]:
                 case 0:
                     # I'm still learning how to use a binary tree as an array
-                    tree[i] ^= 1
                     i = 2 * i + 1
                 case 1:
-                    tree[i] ^= 1
                     i = 2 * i + 2
         
         return tree[i]
+    
+    def touch(self, setIndex: int, wayIndex: int):
+        # AI wrote this method. I only allowed because I'm tired and it doesn't do much.
+        tree = self.sets[setIndex]
+
+        node = 0
+        left = 0
+        right = self.associativity - 1
+
+        while left != right:
+            mid = (left + right) // 2
+
+            if wayIndex <= mid:
+                tree[node] = 1      # victim should be on the other side
+                node = 2 * node + 1
+                right = mid
+            else:
+                tree[node] = 0
+                node = 2 * node + 2
+                left = mid + 1
 
     def _get_block_traversal(tree: list):
         return (tree)
