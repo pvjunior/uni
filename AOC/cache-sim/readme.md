@@ -80,6 +80,31 @@ addresses/addr8.txt
 addresses/addr32.txt
 ```
 
+Creating a new cache:
+Example
+```text
+create 16:1:1:FIFO --OPT_ADDRESSING=8
+```
+Creates a cache with 16 sets, 1 byte per block, direct mapped using 'FIFO' as replacement policy and 8 bits for addressing.
+
+Or
+
+For a fully associative with 64 blocks, 1 byte blocks and Random replacement policy.
+```text
+create 1:1:64:RANDOM
+```
+
+
+You can view any of your created caches using
+```text
+select
+```
+
+And select them like
+```text
+select 1
+```
+
 The simulator may also be used directly from Python:
 
 ```python
