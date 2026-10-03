@@ -1,2 +1,3 @@
 AOC/cache-sim/structures/__pycache__/
 AOC/cache-sim/__pycache__/
+*.out
