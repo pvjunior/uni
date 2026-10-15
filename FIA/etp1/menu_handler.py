@@ -19,9 +19,7 @@ def start():
     _print_cidades()
     part = _read_choice("Escolha a cidade de partida: ", 0, len(heuristica) - 1)
 
-    print("Destino:")
-    _print_cidades()
-    dest = _read_choice("Escolha a cidade de destino: ", 0, len(heuristica) - 1)
+    dest = 12
 
     _print_algoritmos()
     algo = _read_choice("Escolha o algoritmo: ", 1, 6)
