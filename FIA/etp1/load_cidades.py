@@ -21,7 +21,13 @@ def load_matrix(input_file: str) -> tuple[int]:
 
     with open(input_file, "r") as file:
         for line in file:
-            matrix.append(tuple(line.split()))
+            splitted = map(_parse_each, line.split())
+            matrix.append(tuple(splitted))
     
     return tuple(matrix)
+
+def _parse_each(value: str):
+    if value == "-":
+        return None
+    return int(value)
 
